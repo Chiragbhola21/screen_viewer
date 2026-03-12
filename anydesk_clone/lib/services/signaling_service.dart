@@ -298,7 +298,11 @@ class SignalingService extends ChangeNotifier {
   Future<void> shareScreen() async {
     final Map<String, dynamic> mediaConstraints = {
       'audio': false,
-      'video': {
+      'video': kIsWeb ? {
+        'width': {'ideal': 1280},
+        'height': {'ideal': 720},
+        'frameRate': {'ideal': 30},
+      } : {
         'mandatory': {
           'minWidth': '1280',
           'minHeight': '720',

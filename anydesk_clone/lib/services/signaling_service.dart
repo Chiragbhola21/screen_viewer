@@ -103,6 +103,10 @@ class SignalingService extends ChangeNotifier {
     print("Received signaling message: ${message['type']}");
     switch (message['type']) {
       case 'offer':
+        if (isConnected || _pendingOffer != null) {
+          print("Ignoring redundant offer (already connected or pending).");
+          return;
+        }
         _pendingOffer = jsonEncode(message['data']);
         _pendingOfferSender = message['sender'];
         _remoteId = message['sender'];

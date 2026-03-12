@@ -32,10 +32,6 @@ class SignalingService extends ChangeNotifier {
   Future<void> init() async {
     await localRenderer.initialize();
     await remoteRenderer.initialize();
-    
-    // Mute by default to satisfy mobile browser autoplay policies
-    localRenderer.muted = true;
-    remoteRenderer.muted = true;
 
     final rng = Random.secure();
     _myId = (100000000 + rng.nextInt(900000000)).toString();
@@ -344,6 +340,8 @@ class SignalingService extends ChangeNotifier {
       }
       
       localRenderer.srcObject = localStream;
+      // Mute local renderer once stream is attached (safest for cross-platform)
+      localRenderer.muted = true;
       
       final tracks = localStream!.getTracks();
       print("Got display media, tracks: ${tracks.length}");

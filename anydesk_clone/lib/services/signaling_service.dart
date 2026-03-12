@@ -329,13 +329,11 @@ class SignalingService extends ChangeNotifier {
         
         final String sourceId = sources.first.id;
         
-        MediaStream stream = await navigator.mediaDevices.getUserMedia({
+        MediaStream stream = await navigator.mediaDevices.getDisplayMedia({
           'audio': false,
           'video': {
-            'mandatory': {
-              'chromeMediaSource': 'desktop',
-              'chromeMediaSourceId': sourceId,
-            }
+            'deviceId': {'exact': sourceId},
+            'mandatory': {'frameRate': 30.0}
           }
         });
         localStream = stream;

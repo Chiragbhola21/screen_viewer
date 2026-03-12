@@ -66,6 +66,7 @@ class _SessionScreenState extends State<SessionScreen> {
                       color: Colors.black,
                       child: RTCVideoView(
                         signalingService.remoteRenderer,
+                        key: ValueKey(signalingService.remoteRenderer.srcObject?.id ?? 'remote'),
                         objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
                         mirror: false,
                         filterQuality: FilterQuality.medium,

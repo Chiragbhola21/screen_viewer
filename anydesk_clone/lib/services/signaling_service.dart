@@ -168,6 +168,9 @@ class SignalingService extends ChangeNotifier {
       // Ensure track is enabled
       track.enabled = true;
     }
+
+    // Re-enforce muted after srcObject is set (critical for some mobile browsers)
+    remoteRenderer.muted = true;
     
     notifyListeners();
   }

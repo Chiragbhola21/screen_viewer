@@ -238,13 +238,6 @@ class SignalingService extends ChangeNotifier {
       track.enabled = true;
     }
 
-    // For Web, ensure muted is true immediately for autoplay
-    if (kIsWeb) {
-      remoteRenderer.muted = true;
-    } else if (stream.getAudioTracks().isNotEmpty) {
-      remoteRenderer.muted = true;
-    }
-    
     notifyListeners();
   }
 
@@ -276,19 +269,9 @@ class SignalingService extends ChangeNotifier {
 
     peerConnection!.onTrack = (RTCTrackEvent event) {
       print("*** onTrack fired! streams: ${event.streams.length}, track kind: ${event.track.kind}, track id: ${event.track.id}");
-      print("*** Track enabled: ${event.track.enabled}, muted: ${event.track.muted}");
-      
       if (event.streams.isNotEmpty) {
         _setRemoteStream(event.streams[0]);
         print("*** Remote stream set on renderer via onTrack streams!");
-      } else {
-        print("*** No streams in onTrack, creating one from track...");
-        // On Web, sometimes tracks are added without streams. Create a stream and add the track.
-        createLocalMediaStream('remote_stream_${DateTime.now().millisecondsSinceEpoch}').then((stream) {
-          stream.addTrack(event.track);
-          _setRemoteStream(stream);
-          print("*** Remote stream created and track added for renderer!");
-        });
       }
     };
 
@@ -420,7 +403,9 @@ class SignalingService extends ChangeNotifier {
           'audio': false,
           'video': {
             'deviceId': {'exact': sourceId},
-            'frameRate': {'ideal': 30.0}
+            'mandatory': {
+              'frameRate': 30.0,
+            }
           }
         });
         localStream = stream;

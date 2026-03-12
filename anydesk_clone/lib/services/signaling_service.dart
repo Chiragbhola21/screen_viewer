@@ -238,8 +238,10 @@ class SignalingService extends ChangeNotifier {
       track.enabled = true;
     }
 
-    // Re-enforce muted after srcObject is set (critical for some mobile browsers)
-    if (stream.getAudioTracks().isNotEmpty) {
+    // For Web, ensure muted is true immediately for autoplay
+    if (kIsWeb) {
+      remoteRenderer.muted = true;
+    } else if (stream.getAudioTracks().isNotEmpty) {
       remoteRenderer.muted = true;
     }
     
@@ -418,9 +420,7 @@ class SignalingService extends ChangeNotifier {
           'audio': false,
           'video': {
             'deviceId': {'exact': sourceId},
-            'mandatory': {
-              'frameRate': 30.0,
-            }
+            'frameRate': {'ideal': 30.0}
           }
         });
         localStream = stream;

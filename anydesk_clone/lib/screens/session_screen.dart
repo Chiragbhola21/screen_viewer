@@ -11,13 +11,19 @@ class SessionScreen extends StatefulWidget {
   @override
   State<SessionScreen> createState() => _SessionScreenState();
 }
-
 class _SessionScreenState extends State<SessionScreen> {
+  bool _hasAttemptedConnection = false;
+
   @override
   void initState() {
     super.initState();
+    _hasAttemptedConnection = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SignalingService>().connectTo(widget.targetId);
+      context.read<SignalingService>().connectTo(widget.targetId).then((_) {
+        setState(() {
+          _hasAttemptedConnection = true;
+        });
+      });
     });
   }
 
@@ -25,8 +31,8 @@ class _SessionScreenState extends State<SessionScreen> {
   Widget build(BuildContext context) {
     final signalingService = context.watch<SignalingService>();
 
-    // If connection is lost or session ended, navigate back automatically
-    if (!signalingService.isConnected && context.mounted) {
+    // If connection was attempted/active and then lost, navigate back
+    if (_hasAttemptedConnection && !signalingService.isConnected && context.mounted) {
       Future.microtask(() {
         if (Navigator.canPop(context)) {
           Navigator.pop(context);

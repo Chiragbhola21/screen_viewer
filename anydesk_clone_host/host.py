@@ -15,11 +15,19 @@ async def handler(websocket):
                 action = data.get("action")
                 
                 if action == "move":
-                    x = data.get("x", 0)
-                    y = data.get("y", 0)
-                    # For prototype, we just move absolute or relative. Let's assume absolute screen coords mapped by client.
+                    # Get normalized coordinates (0.0 to 1.0)
+                    nx = data.get("x", 0)
+                    ny = data.get("y", 0)
+                    
+                    # Get screen size
+                    screen_width, screen_height = pyautogui.size()
+                    
+                    # Scale to actual screen
+                    x = int(nx * screen_width)
+                    y = int(ny * screen_height)
+                    
                     pyautogui.moveTo(x, y)
-                    print(f"Moved mouse to {x}, {y}")
+                    print(f"Moved mouse to {x}, {y} (scaled from {nx}, {ny})")
                 elif action == "click":
                     pyautogui.click()
                     print("Mouse clicked")

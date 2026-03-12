@@ -113,21 +113,49 @@ class _SessionScreenState extends State<SessionScreen> {
           ),
           // Input Overlay (captures clicks to send to remote) — only when stream is active
           if (signalingService.hasRemoteStream)
-            Positioned.fill(
-              child: GestureDetector(
-                onTapDown: (details) {
-                  print("Tapped at: ${details.localPosition}");
-                  signalingService.sendCommand({
-                    'action': 'move',
-                    'x': details.localPosition.dx,
-                    'y': details.localPosition.dy,
-                  });
-                  signalingService.sendCommand({
-                    'action': 'click'
-                  });
-                },
-                child: Container(
-                  color: Colors.transparent,
+            Center(
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return GestureDetector(
+                      onPanUpdate: (details) {
+                        // Calculate normalized coordinates
+                        double nx = details.localPosition.dx / constraints.maxWidth;
+                        double ny = details.localPosition.dy / constraints.maxHeight;
+                        
+                        // Clamp to 0.0 - 1.0
+                        nx = nx.clamp(0.0, 1.0);
+                        ny = ny.clamp(0.0, 1.0);
+
+                        signalingService.sendCommand({
+                          'action': 'move',
+                          'x': nx,
+                          'y': ny,
+                        });
+                      },
+                      onTapDown: (details) {
+                        // Calculate normalized coordinates for click
+                        double nx = details.localPosition.dx / constraints.maxWidth;
+                        double ny = details.localPosition.dy / constraints.maxHeight;
+                        
+                        nx = nx.clamp(0.0, 1.0);
+                        ny = ny.clamp(0.0, 1.0);
+
+                        signalingService.sendCommand({
+                          'action': 'move',
+                          'x': nx,
+                          'y': ny,
+                        });
+                        signalingService.sendCommand({
+                          'action': 'click'
+                        });
+                      },
+                      child: Container(
+                        color: Colors.transparent,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

@@ -25,6 +25,15 @@ class _SessionScreenState extends State<SessionScreen> {
   Widget build(BuildContext context) {
     final signalingService = context.watch<SignalingService>();
 
+    // If connection is lost or session ended, navigate back automatically
+    if (!signalingService.isConnected && context.mounted) {
+      Future.microtask(() {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Session: ${widget.targetId}'),

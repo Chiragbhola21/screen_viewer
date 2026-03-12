@@ -27,6 +27,7 @@ class SignalingService extends ChangeNotifier {
   String connectionStatus = "Initializing...";
   String? _pendingOffer;
   String? _pendingOfferSender;
+  String? _remoteId; // Tracks who we are currently connected to or trying to connect to
   
   // ICE Candidate Buffering
   final List<RTCIceCandidate> _remoteCandidateBuffer = [];
@@ -99,6 +100,7 @@ class SignalingService extends ChangeNotifier {
       case 'offer':
         _pendingOffer = jsonEncode(message['data']);
         _pendingOfferSender = message['sender'];
+        _remoteId = message['sender'];
         isHostMode = true;
         connectionStatus = "Incoming request...";
         notifyListeners();
@@ -106,6 +108,7 @@ class SignalingService extends ChangeNotifier {
       case 'answer':
         print("Received answer, setting remote description...");
         connectionStatus = "Received Answer, connecting...";
+        _remoteId = message['sender'];
         final sdp = RTCSessionDescription(message['data']['sdp'], message['data']['type']);
         await peerConnection?.setRemoteDescription(sdp);
         print("Remote description set (answer).");
@@ -272,8 +275,12 @@ class SignalingService extends ChangeNotifier {
       print("*** Connection state: $state");
       connectionStatus = "Peer state: ${state.toString().split('.').last}";
       notifyListeners();
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
-        print("*** Connection FAILED - may need to restart");
+      
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+        print("*** Connection lost/failed - cleaning up");
+        endSession(notifyPeer: false);
       }
     };
 
@@ -430,14 +437,12 @@ class SignalingService extends ChangeNotifier {
     }
   }
 
-  Future<void> endSession() async {
-    print("Ending session: Cleaning up resources.");
+  Future<void> endSession({bool notifyPeer = true}) async {
+    print("Ending session: Cleaning up resources (notifyPeer: $notifyPeer).");
     
     // Notify peer
-    if (isConnected && !isHostMode && _pendingOfferSender != null) {
-      _send('end', {'target': _pendingOfferSender!});
-    } else if (isConnected && isHostMode && _pendingOfferSender != null) {
-      _send('end', {'target': _pendingOfferSender!});
+    if (notifyPeer && _remoteId != null) {
+      _send('end', {'target': _remoteId!});
     }
 
     // Close PeerConnection
@@ -453,7 +458,7 @@ class SignalingService extends ChangeNotifier {
       for (var track in localStream!.getTracks()) {
         track.stop();
       }
-      await localStream!.dispose();
+      await localStream?.dispose();
       localStream = null;
     }
     
@@ -461,7 +466,7 @@ class SignalingService extends ChangeNotifier {
       for (var track in _remoteStream!.getTracks()) {
         track.stop();
       }
-      await _remoteStream!.dispose();
+      await _remoteStream?.dispose();
       _remoteStream = null;
     }
 
@@ -473,8 +478,10 @@ class SignalingService extends ChangeNotifier {
     isConnected = false;
     isHostMode = false;
     hasRemoteStream = false;
+    _remoteId = null;
     _pendingOffer = null;
     _pendingOfferSender = null;
+    connectionStatus = "Disconnected";
 
     notifyListeners();
   }

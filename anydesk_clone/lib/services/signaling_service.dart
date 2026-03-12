@@ -107,8 +107,8 @@ class SignalingService extends ChangeNotifier {
     print("Received signaling message: ${message['type']}");
     switch (message['type']) {
       case 'offer':
-        if (isConnected || _pendingOffer != null) {
-          print("Ignoring redundant offer (already connected or pending).");
+        if ((isConnected || _pendingOffer != null) && _remoteId != message['sender']) {
+          print("Ignoring redundant offer from a different peer.");
           return;
         }
         _pendingOffer = jsonEncode(message['data']);
@@ -403,7 +403,6 @@ class SignalingService extends ChangeNotifier {
 
     try {
       if (kIsWeb) {
-        // Removed hard block for mobile web to allow experimental getDisplayMedia support
         localStream = await navigator.mediaDevices.getDisplayMedia(mediaConstraints);
       } else {
         // Desktop platforms (Windows, macOS, Linux)
@@ -413,12 +412,15 @@ class SignalingService extends ChangeNotifier {
         }
         
         final String sourceId = sources.first.id;
+        print("Desktop capturing from sourceId: $sourceId");
         
         MediaStream stream = await navigator.mediaDevices.getDisplayMedia({
           'audio': false,
           'video': {
             'deviceId': {'exact': sourceId},
-            'frameRate': {'ideal': 30.0}
+            'mandatory': {
+              'frameRate': 30.0,
+            }
           }
         });
         localStream = stream;
@@ -439,12 +441,6 @@ class SignalingService extends ChangeNotifier {
         for (var track in localStream!.getTracks()) {
           await peerConnection!.addTrack(track, localStream!);
           print("Added track: ${track.kind} to peer connection");
-        }
-        
-        // Verify senders have tracks
-        final senders = await peerConnection!.getSenders();
-        for (var sender in senders) {
-          print("Sender: track kind=${sender.track?.kind}, id=${sender.track?.id}");
         }
       }
       notifyListeners();

@@ -94,6 +94,10 @@ wss.on('connection', (ws) => {
         }
         break;
 
+      case 'ping':
+        ws.send(JSON.stringify({ type: 'pong' }));
+        break;
+
       default:
         console.warn('Unknown message type:', message.type);
     }

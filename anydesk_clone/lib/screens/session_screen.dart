@@ -80,9 +80,21 @@ class _SessionScreenState extends State<SessionScreen> {
                       const SizedBox(height: 24),
                       Text(
                         'Waiting for remote screen...',
-                        style: TextStyle(color: Colors.white54, fontSize: 16),
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white10,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          signalingService.connectionStatus,
+                          style: TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         'The remote user needs to accept and share their screen.',
                         style: TextStyle(color: Colors.white30, fontSize: 13),

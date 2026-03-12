@@ -24,6 +24,7 @@ class SignalingService extends ChangeNotifier {
   bool isConnected = false;
   bool isHostMode = false;
   bool hasRemoteStream = false;
+  String connectionStatus = "Initializing...";
   String? _pendingOffer;
   String? _pendingOfferSender;
   
@@ -81,6 +82,8 @@ class SignalingService extends ChangeNotifier {
 
     _send('register', {'id': _myId});
     print("Registered with ID: $_myId");
+    connectionStatus = "Ready to connect";
+    notifyListeners();
   }
 
   void _send(String type, Map<String, dynamic> data) {
@@ -97,14 +100,17 @@ class SignalingService extends ChangeNotifier {
         _pendingOffer = jsonEncode(message['data']);
         _pendingOfferSender = message['sender'];
         isHostMode = true;
+        connectionStatus = "Incoming request...";
         notifyListeners();
         break;
       case 'answer':
         print("Received answer, setting remote description...");
+        connectionStatus = "Received Answer, connecting...";
         final sdp = RTCSessionDescription(message['data']['sdp'], message['data']['type']);
         await peerConnection?.setRemoteDescription(sdp);
         print("Remote description set (answer).");
         await _processBufferedCandidates();
+        notifyListeners();
         break;
       case 'candidate':
         final candidate = RTCIceCandidate(
@@ -174,6 +180,7 @@ class SignalingService extends ChangeNotifier {
     await _processBufferedCandidates();
 
     isConnected = true;
+    connectionStatus = "Handshake complete, awaiting stream...";
     _pendingOffer = null;
     _pendingOfferSender = null;
     
@@ -223,6 +230,9 @@ class SignalingService extends ChangeNotifier {
         {'urls': 'stun:stun1.l.google.com:19302'},
         {'urls': 'stun:stun2.l.google.com:19302'},
         {'urls': 'stun:stun3.l.google.com:19302'},
+        {'urls': 'stun:stun4.l.google.com:19302'},
+        {'urls': 'stun:stun.cloudflare.com:3478'},
+        {'urls': 'stun:stun.services.mozilla.com'},
       ]
     };
 
@@ -258,6 +268,8 @@ class SignalingService extends ChangeNotifier {
 
     peerConnection!.onConnectionState = (RTCPeerConnectionState state) {
       print("*** Connection state: $state");
+      connectionStatus = "Peer state: ${state.toString().split('.').last}";
+      notifyListeners();
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
         print("*** Connection FAILED - may need to restart");
       }
@@ -340,6 +352,7 @@ class SignalingService extends ChangeNotifier {
       }
     });
 
+    connectionStatus = "Sent Offer, waiting for Answer...";
     isConnected = true;
     notifyListeners();
   }

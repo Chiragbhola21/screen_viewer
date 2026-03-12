@@ -1,12 +1,11 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "anydesk_clone/build/web/**",
-      "use": "@vercel/static"
-    }
-  ],
   "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/anydesk_clone/build/web/$1",
+      "continue": true
+    },
     {
       "handle": "filesystem"
     },

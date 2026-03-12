@@ -32,6 +32,11 @@ class SignalingService extends ChangeNotifier {
   Future<void> init() async {
     await localRenderer.initialize();
     await remoteRenderer.initialize();
+    
+    // Mute by default to satisfy mobile browser autoplay policies
+    localRenderer.muted = true;
+    remoteRenderer.muted = true;
+
     final rng = Random.secure();
     _myId = (100000000 + rng.nextInt(900000000)).toString();
     notifyListeners();
@@ -314,9 +319,7 @@ class SignalingService extends ChangeNotifier {
 
     try {
       if (kIsWeb) {
-        if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android) {
-          throw Exception("Screen sharing is not supported on mobile web browsers.");
-        }
+        // Removed hard block for mobile web to allow experimental getDisplayMedia support
         localStream = await navigator.mediaDevices.getDisplayMedia(mediaConstraints);
       } else {
         // Desktop platforms (Windows, macOS, Linux)

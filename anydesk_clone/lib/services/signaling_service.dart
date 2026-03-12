@@ -27,6 +27,10 @@ class SignalingService extends ChangeNotifier {
   String? _pendingOffer;
   String? _pendingOfferSender;
   
+  // ICE Candidate Buffering
+  final List<RTCIceCandidate> _remoteCandidateBuffer = [];
+  bool _remoteDescriptionSet = false;
+  
   String get signalingServerUrl => url_helper.getSignalingUrl();
 
   Future<void> init() async {
@@ -41,6 +45,18 @@ class SignalingService extends ChangeNotifier {
     if (!kIsWeb) {
       _connectLocalPythonHost();
     }
+    _startHeartbeat();
+  }
+
+  void _startHeartbeat() {
+    // Keep Render WebSocket alive (55s timeout)
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 30));
+      if (_channel != null && isConnected) {
+        _send('ping', {});
+      }
+      return _channel != null;
+    });
   }
 
   void _connectLocalPythonHost() {
@@ -88,6 +104,7 @@ class SignalingService extends ChangeNotifier {
         final sdp = RTCSessionDescription(message['data']['sdp'], message['data']['type']);
         await peerConnection?.setRemoteDescription(sdp);
         print("Remote description set (answer).");
+        await _processBufferedCandidates();
         break;
       case 'candidate':
         final candidate = RTCIceCandidate(
@@ -95,7 +112,16 @@ class SignalingService extends ChangeNotifier {
           message['data']['sdpMid'], 
           message['data']['sdpMLineIndex']
         );
-        await peerConnection?.addCandidate(candidate);
+        if (_remoteDescriptionSet) {
+          print("Adding ICE candidate immediately");
+          await peerConnection?.addCandidate(candidate);
+        } else {
+          _remoteCandidateBuffer.add(candidate);
+          print("Buffered ICE candidate (waiting for remote description). Current buffer size: ${_remoteCandidateBuffer.length}");
+        }
+        break;
+      case 'pong':
+        // Heartbeat response
         break;
       case 'error':
         print("Signaling error: ${message['message']}");
@@ -143,11 +169,30 @@ class SignalingService extends ChangeNotifier {
         'sdp': answer.sdp,
       }
     });
+    print("Host: Answer sent back to caller.");
+
+    await _processBufferedCandidates();
 
     isConnected = true;
     _pendingOffer = null;
     _pendingOfferSender = null;
+    
+    // Process buffered candidates
     notifyListeners();
+  }
+
+  Future<void> _processBufferedCandidates() async {
+    print("Processing ${_remoteCandidateBuffer.length} buffered ICE candidates...");
+    _remoteDescriptionSet = true;
+    for (var candidate in _remoteCandidateBuffer) {
+      try {
+        await peerConnection?.addCandidate(candidate);
+        print("Added buffered candidate successfully.");
+      } catch (e) {
+        print("Error adding buffered candidate: $e");
+      }
+    }
+    _remoteCandidateBuffer.clear();
   }
 
   void _setRemoteStream(MediaStream stream) {

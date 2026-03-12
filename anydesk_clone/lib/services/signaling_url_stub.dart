@@ -1,4 +1,5 @@
 // Stub for non-web platforms (mobile/desktop)
 String getSignalingUrl() {
-  return 'ws://localhost:8080';
+  // Use Render signaling server for production
+  return 'wss://screen-viewer-gqu3.onrender.com';
 }

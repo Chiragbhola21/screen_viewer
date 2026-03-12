@@ -22389,14 +22389,9 @@ r=t.m.a(self)
 for(q=s.length,p=t.NX,o=0;o<q;++o){n=s[o]
 r=p.a(r[n])
 if(r==null)return!1}return a instanceof t.lT.a(r)},
-arX(){var s,r=window.location,q=r.hostname
-if(q==="localhost"||q==="127.0.0.1")return"ws://localhost:8080"
-q=r.protocol
-q.toString
-s=q==="https:"?"wss":"ws"
-r=r.host
-r.toString
-return s+"://"+r},
+arX(){var s=window.location.hostname
+if(s==="localhost"||s==="127.0.0.1")return"ws://localhost:8080"
+return"wss://screen-viewer-gqu3.onrender.com"},
 oU(a){var s=u.R.charCodeAt(a>>>6)+(a&63),r=s&1,q=u.I.charCodeAt(s>>>1)
 return q>>>4&-r|q&15&r-1},
 iS(a,b){var s=(a&1023)<<10|b&1023,r=u.R.charCodeAt(1024+(s>>>9))+(s&511),q=r&1,p=u.I.charCodeAt(r>>>1)

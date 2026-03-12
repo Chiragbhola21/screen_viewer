@@ -7,6 +7,5 @@ String getSignalingUrl() {
   if (loc.hostname == 'localhost' || loc.hostname == '127.0.0.1') {
     return 'ws://localhost:8080';
   }
-  final wsScheme = loc.protocol == 'https:' ? 'wss' : 'ws';
-  return '$wsScheme://${loc.host}';
+  return 'wss://screen-viewer-gqu3.onrender.com';
 }

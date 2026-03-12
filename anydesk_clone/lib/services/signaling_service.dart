@@ -26,6 +26,10 @@ class SignalingService extends ChangeNotifier {
   bool get isHostMode => _isHostMode;
   set isHostMode(bool value) {
     _isHostMode = value;
+    if (!value) {
+      _pendingOffer = null;
+      _pendingOfferSender = null;
+    }
     notifyListeners();
   }
   bool hasRemoteStream = false;
@@ -155,49 +159,54 @@ class SignalingService extends ChangeNotifier {
   Future<void> acceptIncomingConnection() async {
     if (_pendingOffer == null || _pendingOfferSender == null) return;
     
-    final offerData = jsonDecode(_pendingOffer!);
-    final senderId = _pendingOfferSender!;
-    final sdp = RTCSessionDescription(offerData['sdp'], offerData['type']);
-    
-    await _setupPeerConnection(senderId);
+    try {
+      final offerData = jsonDecode(_pendingOffer!);
+      final senderId = _pendingOfferSender!;
+      final sdp = RTCSessionDescription(offerData['sdp'], offerData['type']);
+      
+      await _setupPeerConnection(senderId);
 
-    // STEP 1: Share screen FIRST to get the tracks
-    await shareScreen();
-    print("Host: Screen shared, tracks added.");
+      // STEP 1: Share screen FIRST to get the tracks
+      await shareScreen();
+      print("Host: Screen shared, tracks added.");
 
-    // STEP 2: Set the remote description (the offer from the caller)
-    await peerConnection!.setRemoteDescription(sdp);
-    print("Host: Remote description set (offer from caller).");
+      // STEP 2: Set the remote description (the offer from the caller)
+      await peerConnection!.setRemoteDescription(sdp);
+      print("Host: Remote description set (offer from caller).");
 
-    // STEP 3: Create and send the answer
-    RTCSessionDescription answer = await peerConnection!.createAnswer({
-      'mandatory': {
-        'OfferToReceiveAudio': false,
-        'OfferToReceiveVideo': false, // Host sends video but doesn't receive
-      }
-    });
-    await peerConnection!.setLocalDescription(answer);
-    print("Host: Answer created and set.");
-    print("Host: Answer SDP contains video: ${answer.sdp?.contains('m=video') ?? false}");
+      // STEP 3: Create and send the answer
+      RTCSessionDescription answer = await peerConnection!.createAnswer({
+        'mandatory': {
+          'OfferToReceiveAudio': false,
+          'OfferToReceiveVideo': false, // Host sends video but doesn't receive
+        }
+      });
+      await peerConnection!.setLocalDescription(answer);
+      print("Host: Answer created and set.");
+      print("Host: Answer SDP contains video: ${answer.sdp?.contains('m=video') ?? false}");
 
-    _send('answer', {
-      'target': senderId,
-      'data': {
-        'type': answer.type,
-        'sdp': answer.sdp,
-      }
-    });
-    print("Host: Answer sent back to caller.");
+      _send('answer', {
+        'target': senderId,
+        'data': {
+          'type': answer.type,
+          'sdp': answer.sdp,
+        }
+      });
+      print("Host: Answer sent back to caller.");
 
-    await _processBufferedCandidates();
+      await _processBufferedCandidates();
 
-    isConnected = true;
-    connectionStatus = "Handshake complete, awaiting stream...";
-    _pendingOffer = null;
-    _pendingOfferSender = null;
-    
-    // Process buffered candidates
-    notifyListeners();
+      isConnected = true;
+      connectionStatus = "Handshake complete, awaiting stream...";
+      
+      // Process buffered candidates
+      notifyListeners();
+    } finally {
+      // ALWAYS clear pending state
+      _pendingOffer = null;
+      _pendingOfferSender = null;
+      notifyListeners();
+    }
   }
 
   Future<void> _processBufferedCandidates() async {
@@ -385,18 +394,11 @@ class SignalingService extends ChangeNotifier {
   Future<void> shareScreen() async {
     final Map<String, dynamic> mediaConstraints = {
       'audio': false,
-      'video': kIsWeb ? {
+      'video': {
         'width': {'ideal': 1280},
         'height': {'ideal': 720},
         'frameRate': {'ideal': 30},
-      } : {
-        'mandatory': {
-          'minWidth': '1280',
-          'minHeight': '720',
-          'minFrameRate': '30',
-        },
-        'optional': [],
-      }, 
+      },
     };
 
     try {
@@ -416,15 +418,13 @@ class SignalingService extends ChangeNotifier {
           'audio': false,
           'video': {
             'deviceId': {'exact': sourceId},
-            'mandatory': {'frameRate': 30.0}
+            'frameRate': {'ideal': 30.0}
           }
         });
         localStream = stream;
       }
       
       localRenderer.srcObject = localStream;
-      // Mute local renderer once stream is attached (safest for cross-platform)
-      // Only mute if there are audio tracks to avoid "MediaStreamTrack(audio) is empty" error on some platforms
       if (localStream!.getAudioTracks().isNotEmpty) {
         localRenderer.muted = true;
       }

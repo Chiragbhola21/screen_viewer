@@ -218,7 +218,9 @@ class SignalingService extends ChangeNotifier {
     }
 
     // Re-enforce muted after srcObject is set (critical for some mobile browsers)
-    remoteRenderer.muted = true;
+    if (stream.getAudioTracks().isNotEmpty) {
+      remoteRenderer.muted = true;
+    }
     
     notifyListeners();
   }
@@ -399,7 +401,10 @@ class SignalingService extends ChangeNotifier {
       
       localRenderer.srcObject = localStream;
       // Mute local renderer once stream is attached (safest for cross-platform)
-      localRenderer.muted = true;
+      // Only mute if there are audio tracks to avoid "MediaStreamTrack(audio) is empty" error on some platforms
+      if (localStream!.getAudioTracks().isNotEmpty) {
+        localRenderer.muted = true;
+      }
       
       final tracks = localStream!.getTracks();
       print("Got display media, tracks: ${tracks.length}");

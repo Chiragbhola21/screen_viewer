@@ -120,7 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: () {
                         // Decline
                         signalingService.isHostMode = false;
-                        signalingService.notifyListeners();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey[700],
@@ -144,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             );
                             signalingService.isHostMode = false;
-                            signalingService.notifyListeners();
                           }
                         }
                       },

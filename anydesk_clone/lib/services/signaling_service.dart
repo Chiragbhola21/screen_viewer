@@ -22,7 +22,12 @@ class SignalingService extends ChangeNotifier {
   RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
 
   bool isConnected = false;
-  bool isHostMode = false;
+  bool _isHostMode = false;
+  bool get isHostMode => _isHostMode;
+  set isHostMode(bool value) {
+    _isHostMode = value;
+    notifyListeners();
+  }
   bool hasRemoteStream = false;
   String connectionStatus = "Initializing...";
   String? _pendingOffer;
@@ -445,29 +450,49 @@ class SignalingService extends ChangeNotifier {
       _send('end', {'target': _remoteId!});
     }
 
-    // Close PeerConnection
-    await peerConnection?.close();
-    peerConnection = null;
-
-    // Close DataChannel
-    await _dataChannel?.close();
+    // Close DataChannel first (while PeerConnection is still alive)
+    try {
+      if (_dataChannel != null) {
+        await _dataChannel!.close();
+      }
+    } catch (e) {
+      print("Error closing DataChannel: $e");
+    }
     _dataChannel = null;
 
-    // Dispose Streams
-    if (localStream != null) {
-      for (var track in localStream!.getTracks()) {
-        track.stop();
+    // Close PeerConnection
+    try {
+      if (peerConnection != null) {
+        await peerConnection!.close();
       }
-      await localStream?.dispose();
-      localStream = null;
+    } catch (e) {
+      print("Error closing PeerConnection: $e");
+    }
+    peerConnection = null;
+
+    // Dispose Streams
+    try {
+      if (localStream != null) {
+        for (var track in localStream!.getTracks()) {
+          track.stop();
+        }
+        await localStream?.dispose();
+        localStream = null;
+      }
+    } catch (e) {
+      print("Error disposing localStream: $e");
     }
     
-    if (_remoteStream != null) {
-      for (var track in _remoteStream!.getTracks()) {
-        track.stop();
+    try {
+      if (_remoteStream != null) {
+        for (var track in _remoteStream!.getTracks()) {
+          track.stop();
+        }
+        await _remoteStream?.dispose();
+        _remoteStream = null;
       }
-      await _remoteStream?.dispose();
-      _remoteStream = null;
+    } catch (e) {
+      print("Error disposing remoteStream: $e");
     }
 
     // Reset Renderers
